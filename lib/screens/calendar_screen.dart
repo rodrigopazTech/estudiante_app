@@ -3,130 +3,463 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class CalendarScreen extends StatelessWidget {
   const CalendarScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('classes')
-          .orderBy('dateTime', descending: false)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    final user = FirebaseAuth.instance.currentUser;
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(child: Text('No hay clases programadas.'));
-        }
+    return Scaffold(
+      backgroundColor: const Color(0xFFF9F9FF),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('classes')
+            .orderBy('dateTime', descending: false)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-        return ListView.builder(
-          itemCount: snapshot.data!.docs.length,
-          itemBuilder: (context, index) {
-            final classDoc = snapshot.data!.docs[index];
-            final classData = classDoc.data() as Map<String, dynamic>;
-            final title = classData['title'] ?? 'Clase sin título';
-            final description = classData['description'] ?? 'Sin descripción disponible.';
-            final dateTime = (classData['dateTime'] as Timestamp).toDate();
-            final meetLink = classData['meetLink'] ?? 'https://meet.google.com/xxx-xxxx-xxx';
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text('No hay clases programadas.'));
+          }
 
-            final isFuture = dateTime.isAfter(DateTime.now());
-
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: ExpansionTile(
-                leading: CircleAvatar(
-                  backgroundColor: isFuture ? Colors.blue : Colors.grey,
-                  child: Text(
-                    DateFormat('dd').format(dateTime),
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ),
-                title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text(DateFormat('EEEE, d MMMM - HH:mm', 'es_ES').format(dateTime)),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
+          return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Momentum Engine Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Contenido de la clase:',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                          'YOUR MOMENTUM',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF0058BC),
+                            letterSpacing: 1.5,
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(description),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            ElevatedButton.icon(
-                              onPressed: () => _launchUrl(meetLink),
-                              icon: const Icon(Icons.video_call),
-                              label: const Text('Unirse a Meet'),
-                            ),
-                            const Spacer(),
-                            if (isFuture)
-                              TextButton.icon(
-                                onPressed: () => _showAttendanceDialog(context, classDoc.id),
-                                icon: const Icon(Icons.check_circle_outline),
-                                label: const Text('Validar Asistencia'),
-                              ),
-                          ],
+                        const SizedBox(height: 4),
+                        Text(
+                          'Weekly Schedule',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF181C23),
+                            letterSpacing: -1.0,
+                          ),
                         ),
                       ],
+                    ),
+                    // Streak Badge (Real data from user profile if possible)
+                    _buildStreakBadge(user?.uid),
+                  ],
+                ),
+                const SizedBox(height: 32),
+
+                // Class Cards List
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: snapshot.data!.docs.length,
+                  itemBuilder: (context, index) {
+                    final classDoc = snapshot.data!.docs[index];
+                    final classData = classDoc.data() as Map<String, dynamic>;
+                    final title = classData['title'] ?? 'Clase sin título';
+                    final description =
+                        classData['description'] ?? 'Sin descripción disponible.';
+                    final dateTime = (classData['dateTime'] as Timestamp).toDate();
+                    final meetLink =
+                        classData['meetLink'] ?? 'https://meet.google.com/xxx';
+
+                    final now = DateTime.now();
+                    final isToday = dateTime.day == now.day &&
+                        dateTime.month == now.month &&
+                        dateTime.year == now.year;
+                    final isActive = isToday &&
+                        now.isAfter(dateTime) &&
+                        now.isBefore(dateTime.add(const Duration(hours: 2)));
+                    final isFuture = dateTime.isAfter(now);
+
+                    return _buildClassCard(
+                      context,
+                      classId: classDoc.id,
+                      title: title,
+                      description: description,
+                      dateTime: dateTime,
+                      meetLink: meetLink,
+                      isActive: isActive,
+                      isToday: isToday,
+                      isFuture: isFuture,
+                    );
+                  },
+                ),
+                const SizedBox(height: 100),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildStreakBadge(String? userId) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: userId != null
+          ? FirebaseFirestore.instance.collection('users').doc(userId).snapshots()
+          : null,
+      builder: (context, snapshot) {
+        final streak = (snapshot.hasData && snapshot.data!.exists)
+            ? (snapshot.data!.data() as Map<String, dynamic>)['streak'] ?? 0
+            : 0;
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF72FE88),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF006B27).withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.local_fire_department_rounded,
+                  color: Color(0xFF006B27), size: 20),
+              const SizedBox(width: 8),
+              Text(
+                '$streak Day Streak',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF006B27),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildClassCard(
+    BuildContext context, {
+    required String classId,
+    required String title,
+    required String description,
+    required DateTime dateTime,
+    required String meetLink,
+    required bool isActive,
+    required bool isToday,
+    required bool isFuture,
+  }) {
+    final dateStr = DateFormat('MMM dd').format(dateTime);
+    final timeStr =
+        '${DateFormat('hh:mm a').format(dateTime)} - ${DateFormat('hh:mm a').format(dateTime.add(const Duration(hours: 1, minutes: 30)))}';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: isActive ? Colors.white : const Color(0xFFF1F3FE),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: isActive
+            ? [
+                BoxShadow(
+                  color: const Color(0xFF181C23).withOpacity(0.04),
+                  blurRadius: 30,
+                  offset: const Offset(0, 8),
+                ),
+              ]
+            : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    dateStr,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0058BC),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    title,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF181C23),
+                      height: 1.1,
                     ),
                   ),
                 ],
               ),
-            );
-          },
-        );
-      },
+              if (isActive)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD8E2FF),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'ACTIVE NOW',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0058BC),
+                    ),
+                  ),
+                )
+              else if (isToday)
+                const Text(
+                  'NEXT',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF717786),
+                    letterSpacing: 1.0,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Icon(Icons.schedule_rounded,
+                  color: Color(0xFF414755), size: 16),
+              const SizedBox(width: 8),
+              Text(
+                timeStr,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF414755),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            description,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: const Color(0xFF414755).withOpacity(0.8),
+              height: 1.5,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: isActive ? () => _launchUrl(meetLink) : null,
+                  icon: const Icon(Icons.videocam_rounded, size: 18),
+                  label: const Text('Unirse a Meet'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0058BC),
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.grey.shade300,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: const StadiumBorder(),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: isActive || isFuture
+                      ? () => _showAttendanceDialog(context, classId)
+                      : null,
+                  icon: const Icon(Icons.check_circle_rounded, size: 18),
+                  label: const Text('Validar Asistencia'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFA1BEFD),
+                    foregroundColor: const Color(0xFF2D4C83),
+                    disabledBackgroundColor: Colors.transparent,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: const StadiumBorder(),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
   void _showAttendanceDialog(BuildContext context, String classId) {
-    final TextEditingController codeController = TextEditingController();
+    final List<TextEditingController> controllers =
+        List.generate(6, (index) => TextEditingController());
+    final List<FocusNode> focusNodes = List.generate(6, (index) => FocusNode());
 
     showDialog(
       context: context,
+      barrierDismissible: true,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Ingresar código de asistencia'),
-          content: TextField(
-            controller: codeController,
-            decoration: const InputDecoration(
-              hintText: 'Código enviado por el instructor',
-              border: OutlineInputBorder(),
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(32),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 40,
+                  offset: const Offset(0, 20),
+                ),
+              ],
             ),
-            keyboardType: TextInputType.number,
-            maxLength: 6,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFD8E2FF),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.fingerprint_rounded,
+                      color: Color(0xFF0058BC), size: 32),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Validar Asistencia',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF181C23),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Ingresa el código de 6 dígitos proporcionado por tu docente.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: const Color(0xFF414755),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                // Code Input Fields
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: List.generate(6, (index) {
+                    return SizedBox(
+                      width: 45,
+                      height: 56,
+                      child: TextField(
+                        controller: controllers[index],
+                        focusNode: focusNodes[index],
+                        textAlign: TextAlign.center,
+                        keyboardType: TextInputType.number,
+                        maxLength: 1,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                        ),
+                        decoration: InputDecoration(
+                          counterText: '',
+                          filled: true,
+                          fillColor: const Color(0xFFF1F3FE),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        onChanged: (value) {
+                          if (value.isNotEmpty && index < 5) {
+                            focusNodes[index + 1].requestFocus();
+                          } else if (value.isEmpty && index > 0) {
+                            focusNodes[index - 1].requestFocus();
+                          }
+                        },
+                      ),
+                    );
+                  }),
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      final code =
+                          controllers.map((c) => c.text).join();
+                      if (code.length == 6) {
+                        Navigator.pop(context);
+                        _validateAttendance(context, classId, code);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0058BC),
+                      foregroundColor: Colors.white,
+                      shape: const StadiumBorder(),
+                      elevation: 0,
+                    ),
+                    child: const Text('Enviar',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    'Cancelar',
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF414755),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final code = codeController.text;
-                Navigator.pop(context);
-                _validateAttendance(context, classId, code);
-              },
-              child: const Text('Enviar'),
-            ),
-          ],
         );
       },
     );
   }
 
-  Future<void> _validateAttendance(BuildContext context, String classId, String code) async {
+  Future<void> _validateAttendance(
+      BuildContext context, String classId, String code) async {
     try {
-      final result = await FirebaseFunctions.instance.httpsCallable('validateAttendance').call({
+      final result = await FirebaseFunctions.instance
+          .httpsCallable('validateAttendance')
+          .call({
         'classId': classId,
         'code': code,
       });
@@ -134,21 +467,26 @@ class CalendarScreen extends StatelessWidget {
       if (!context.mounted) return;
 
       final bool success = result.data['success'] ?? false;
-      final String message = result.data['message'] ?? 'Respuesta del servidor no disponible.';
+      final String message =
+          result.data['message'] ?? 'Respuesta del servidor no disponible.';
 
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: Colors.green),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: Colors.red),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: success ? Colors.green : Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al validar asistencia: $e')),
+        SnackBar(
+          content: Text('Error al validar asistencia: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       );
     }
   }
@@ -156,8 +494,7 @@ class CalendarScreen extends StatelessWidget {
   Future<void> _launchUrl(String url) async {
     final uri = Uri.parse(url);
     if (!await launchUrl(uri)) {
-      // ignore: avoid_print
-      print('Could not launch $url');
+      debugPrint('Could not launch $url');
     }
   }
 }
