@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "60417216583",
+    "project_id": "students-course-rodrigopaz",
+    "storage_bucket": "students-course-rodrigopaz.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:60417216583:android:371ba87d41ab91a13be162",
+        "android_client_info": {
+          "package_name": "com.rodrigopaz.estudiante_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDORuCs9EJb9QHn8noNUKjBPyuYBZCtIU8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
