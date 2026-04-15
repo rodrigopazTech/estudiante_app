@@ -4,6 +4,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
 
 import 'screens/calendar_screen.dart';
@@ -13,10 +14,16 @@ import 'screens/profile_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('es_ES', null);
-  
-  // Inicialización de Firebase personalizada para tu proyecto
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // Solicitar permisos de notificaciones push
+  await FirebaseMessaging.instance.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
   );
 
   runApp(const EstudianteApp());
@@ -89,6 +96,19 @@ class LoginScreen extends StatelessWidget {
             'totalAttendance': 0,
             'createdAt': FieldValue.serverTimestamp(),
           });
+        }
+
+        // Si es instructor, actualizar FCM token automáticamente al hacer login
+        final settingsDoc = await FirebaseFirestore.instance
+            .collection('instructorSettings')
+            .doc(user.uid)
+            .get();
+        if (settingsDoc.exists && settingsDoc.data()?['role'] == 'instructor') {
+          final fcmToken = await FirebaseMessaging.instance.getToken();
+          await FirebaseFirestore.instance
+              .collection('instructorSettings')
+              .doc(user.uid)
+              .update({'fcmToken': fcmToken});
         }
       }
       if (context.mounted) {

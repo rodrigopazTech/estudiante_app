@@ -1,1 +1,54 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"students-course-rodrigopaz","appId":"1:60417216583:android:371ba87d41ab91a13be162","fileOutput":"android/app/google-services.json"}},"ios":{"default":{"projectId":"students-course-rodrigopaz","appId":"1:60417216583:ios:550055d4d1193a313be162","uploadDebugSymbols":false,"fileOutput":"ios/Runner/GoogleService-Info.plist"}},"macos":{"default":{"projectId":"students-course-rodrigopaz","appId":"1:60417216583:ios:550055d4d1193a313be162","uploadDebugSymbols":false,"fileOutput":"macos/Runner/GoogleService-Info.plist"}},"dart":{"lib/firebase_options.dart":{"projectId":"students-course-rodrigopaz","configurations":{"android":"1:60417216583:android:371ba87d41ab91a13be162","ios":"1:60417216583:ios:550055d4d1193a313be162","macos":"1:60417216583:ios:550055d4d1193a313be162","web":"1:60417216583:web:493c129d71dcdd4b3be162","windows":"1:60417216583:web:1aa9ea91a4291ae73be162"}}}}}}
+{
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ]
+    }
+  ],
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "students-course-rodrigopaz",
+          "appId": "1:60417216583:android:371ba87d41ab91a13be162",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "students-course-rodrigopaz",
+          "appId": "1:60417216583:ios:550055d4d1193a313be162",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "macos": {
+        "default": {
+          "projectId": "students-course-rodrigopaz",
+          "appId": "1:60417216583:ios:550055d4d1193a313be162",
+          "uploadDebugSymbols": false,
+          "fileOutput": "macos/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "students-course-rodrigopaz",
+          "configurations": {
+            "android": "1:60417216583:android:371ba87d41ab91a13be162",
+            "ios": "1:60417216583:ios:550055d4d1193a313be162",
+            "macos": "1:60417216583:ios:550055d4d1193a313be162",
+            "web": "1:60417216583:web:493c129d71dcdd4b3be162",
+            "windows": "1:60417216583:web:1aa9ea91a4291ae73be162"
+          }
+        }
+      }
+    }
+  }
+}

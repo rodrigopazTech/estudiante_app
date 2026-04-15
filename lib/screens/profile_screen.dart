@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'instructor_settings_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -27,6 +28,7 @@ class ProfileScreen extends StatelessWidget {
         final userData = snapshot.data!.data() as Map<String, dynamic>;
         final streak = userData['streak'] ?? 0;
         final totalAttendance = userData['totalAttendance'] ?? 0;
+        final isInstructor = userData['role'] == 'instructor';
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -45,6 +47,24 @@ class ProfileScreen extends StatelessWidget {
                 user.email ?? '',
                 style: const TextStyle(color: Colors.grey),
               ),
+              if (isInstructor) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade100,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'Instructor',
+                    style: TextStyle(
+                      color: Colors.blue.shade800,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 40),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -66,6 +86,24 @@ class ProfileScreen extends StatelessWidget {
                   style: TextStyle(fontStyle: FontStyle.italic),
                 ),
               ),
+
+              // Botón de ajustes del instructor (solo visible para instructores)
+              if (isInstructor) ...[
+                const SizedBox(height: 20),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.tune, color: Colors.blue),
+                  title: const Text('Ajustes de notificaciones'),
+                  subtitle: const Text('Configura cómo recibes los códigos de clase'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => InstructorSettingsScreen(userId: user.uid),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         );
