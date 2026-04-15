@@ -59,7 +59,6 @@ class ProfileScreen extends StatelessWidget {
                             child: CircleAvatar(
                               radius: 64,
                               backgroundColor: Colors.white,
-                              padding: const EdgeInsets.all(4),
                               child: ClipOval(
                                 child: Image.network(
                                   user.photoURL ?? '',
@@ -170,7 +169,7 @@ class ProfileScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: const Color(0xFF0058BC).withOpacity(0.05),
                     borderRadius: BorderRadius.circular(24),
-                    relative: true,
+
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -230,7 +229,7 @@ class ProfileScreen extends StatelessWidget {
 
                 // Achievements List
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.between,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       'Logros Recientes',
@@ -318,7 +317,7 @@ class ProfileScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.between,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
