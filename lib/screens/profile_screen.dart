@@ -37,7 +37,7 @@ class ProfileScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             child: Column(
               children: [
-                // Profile Header
+                // ── Cabecera de perfil ──
                 Center(
                   child: Column(
                     children: [
@@ -71,27 +71,29 @@ class ProfileScreen extends StatelessWidget {
                               ),
                             ),
                           ),
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF006B27),
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 2),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
+                          // Badge de instructor (solo visible para instructores)
+                          if (isInstructor)
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF006B27),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white, width: 2),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(Icons.verified_rounded,
+                                    color: Colors.white, size: 16),
                               ),
-                              child: const Icon(Icons.verified_rounded,
-                                  color: Colors.white, size: 16),
                             ),
-                          ),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -136,7 +138,7 @@ class ProfileScreen extends StatelessWidget {
 
                 const SizedBox(height: 32),
 
-                // Stats Grid (Bento Style)
+                // ── Tarjetas de estadísticas (datos reales de Firestore) ──
                 Row(
                   children: [
                     Expanded(
@@ -145,17 +147,17 @@ class ProfileScreen extends StatelessWidget {
                         '$streak',
                         Icons.local_fire_department_rounded,
                         const Color(0xFFBA1A1A),
-                        'TOP 5%',
+                        streak > 0 ? '🔥 En racha' : 'Sin racha',
                       ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: _buildStatCard(
                         'Asistencias',
-                        '${totalAttendance > 100 ? 100 : totalAttendance}%',
+                        '$totalAttendance',
                         Icons.check_circle_rounded,
                         const Color(0xFF006B27),
-                        'EXCELENTE',
+                        totalAttendance > 0 ? '✅ Registradas' : 'Sin registros',
                       ),
                     ),
                   ],
@@ -163,13 +165,12 @@ class ProfileScreen extends StatelessWidget {
 
                 const SizedBox(height: 32),
 
-                // Mission Section
+                // ── Misión del Curso (texto real) ──
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     color: const Color(0xFF0058BC).withOpacity(0.05),
                     borderRadius: BorderRadius.circular(24),
-
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -191,77 +192,20 @@ class ProfileScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        '"Transformar la curiosidad en competencia técnica, dominando los fundamentos para crear interfaces que inspiren movimiento."',
+                        'Desarrollar apps que motiven a aprender y facilitar la consulta de materiales del curso.',
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
                           fontStyle: FontStyle.italic,
                           color: const Color(0xFF181C23),
-                          height: 1.5,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: 0.72,
-                          minHeight: 8,
-                          backgroundColor: const Color(0xFFE6E8F3),
-                          valueColor:
-                              const AlwaysStoppedAnimation<Color>(Color(0xFF0058BC)),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        '72% DE LA META ALCANZADA',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF414755),
-                          letterSpacing: 1.0,
+                          height: 1.6,
                         ),
                       ),
                     ],
                   ),
                 ),
 
-                const SizedBox(height: 32),
-
-                // Achievements List
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Logros Recientes',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF181C23),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {},
-                      child: const Text('Ver todos',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _buildAchievementItem(
-                  'Lectura Veloz',
-                  'Completaste 5 módulos en un día',
-                  Icons.menu_book_rounded,
-                  const Color(0xFFA1BEFD),
-                ),
-                const SizedBox(height: 12),
-                _buildAchievementItem(
-                  'Puntualidad de Oro',
-                  '10 entregas antes de la fecha límite',
-                  Icons.emoji_events_rounded,
-                  const Color(0xFF72FE88),
-                ),
-
-                // Instructor Settings
+                // ── Ajustes del instructor (solo visible para instructores) ──
                 if (isInstructor) ...[
                   const SizedBox(height: 32),
                   const Divider(color: Color(0xFFC1C6D7), thickness: 0.5),
@@ -279,7 +223,7 @@ class ProfileScreen extends StatelessWidget {
                       'Ajustes de notificaciones',
                       style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                     ),
-                    subtitle: const Text('Configura cómo recibes los códigos'),
+                    subtitle: const Text('Configura cómo recibes los códigos de clase'),
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () => Navigator.push(
                       context,
@@ -289,6 +233,7 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ),
                 ],
+
                 const SizedBox(height: 40),
               ],
             ),
@@ -354,53 +299,6 @@ class ProfileScreen extends StatelessWidget {
               fontWeight: FontWeight.w700,
               color: const Color(0xFF414755).withOpacity(0.6),
               letterSpacing: 1.0,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAchievementItem(
-      String title, String subtitle, IconData icon, Color bgColor) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F3FE),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: bgColor,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: const Color(0xFF181C23).withOpacity(0.7), size: 22),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF181C23),
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: const Color(0xFF414755),
-                  ),
-                ),
-              ],
             ),
           ),
         ],
