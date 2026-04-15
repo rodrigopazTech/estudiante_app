@@ -4,6 +4,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'firebase_options.dart';
@@ -122,7 +123,21 @@ class LoginScreen extends StatelessWidget {
             'createdAt': FieldValue.serverTimestamp(),
           });
         }
+
+        // Si es instructor, refrescar FCM token en cada login
+        final settingsDoc = await FirebaseFirestore.instance
+            .collection('instructorSettings')
+            .doc(user.uid)
+            .get();
+        if (settingsDoc.exists && settingsDoc.data()?['role'] == 'instructor') {
+          final fcmToken = await FirebaseMessaging.instance.getToken();
+          await FirebaseFirestore.instance
+              .collection('instructorSettings')
+              .doc(user.uid)
+              .update({'fcmToken': fcmToken});
+        }
       }
+
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
