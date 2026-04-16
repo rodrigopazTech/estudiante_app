@@ -13,8 +13,6 @@
   "engines": {
     "node": "22"
   },
-
-
   "dependencies": {
     "axios": "^1.15.0",
     "firebase-admin": "^13.8.0",

@@ -154,21 +154,6 @@ class MaterialsScreen extends StatelessWidget {
                 height: 1.2,
               ),
             ),
-            const SizedBox(height: 32),
-            Row(
-              children: [
-                _buildAvatarStack(),
-                const SizedBox(width: 12),
-                Text(
-                  'Visualizado por 14 compañeros',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF414755).withOpacity(0.7),
-                  ),
-                ),
-              ],
-            ),
           ],
         ),
       ),
@@ -225,59 +210,6 @@ class MaterialsScreen extends StatelessWidget {
             const Icon(Icons.chevron_right_rounded, color: Color(0xFF717786)),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildAvatarStack() {
-    return SizedBox(
-      width: 70,
-      height: 32,
-      child: Stack(
-        children: [
-          Positioned(
-            left: 0,
-            child: _buildMiniAvatar('https://i.pravatar.cc/100?u=1'),
-          ),
-          Positioned(
-            left: 18,
-            child: _buildMiniAvatar('https://i.pravatar.cc/100?u=2'),
-          ),
-          Positioned(
-            left: 36,
-            child: Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: const Color(0xFFD8E2FF),
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
-              ),
-              child: const Center(
-                child: Text(
-                  '+12',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0058BC),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMiniAvatar(String url) {
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 2),
-        image: DecorationImage(image: NetworkImage(url), fit: BoxFit.cover),
       ),
     );
   }
@@ -341,7 +273,7 @@ class MaterialsScreen extends StatelessWidget {
                     _buildSheetAction(
                       context,
                       'Ver grabación',
-                      'MP4 • 1h 45m • 4K Calidad',
+                      'Grabación de la sesión',
                       Icons.videocam_rounded,
                       const Color(0xFF0058BC),
                       recording,
@@ -350,7 +282,7 @@ class MaterialsScreen extends StatelessWidget {
                     _buildSheetAction(
                       context,
                       'Ver código (Drive)',
-                      'GitHub Repository / Zip Bundle',
+                      'Código y recursos de la clase',
                       Icons.code_rounded,
                       const Color(0xFF414755),
                       drive,
@@ -358,8 +290,8 @@ class MaterialsScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     _buildSheetAction(
                       context,
-                      'Ver otros documentos',
-                      'PDF Slides • Resúmenes • Ejercicios',
+                      'Ver documentos',
+                      'Slides, apuntes y ejercicios',
                       Icons.description_rounded,
                       const Color(0xFF414755),
                       doc,

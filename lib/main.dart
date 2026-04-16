@@ -124,17 +124,31 @@ class LoginScreen extends StatelessWidget {
           });
         }
 
-        // Si es instructor, refrescar FCM token en cada login
-        final settingsDoc = await FirebaseFirestore.instance
-            .collection('instructorSettings')
-            .doc(user.uid)
-            .get();
-        if (settingsDoc.exists && settingsDoc.data()?['role'] == 'instructor') {
-          final fcmToken = await FirebaseMessaging.instance.getToken();
-          await FirebaseFirestore.instance
+        // Guardar FCM token de TODOS los usuarios (alumnos y instructor)
+        // Necesario para enviar notificaciones de reprogramación de clases
+        final fcmToken = await FirebaseMessaging.instance.getToken(
+  vapidKey: 'BJijRXdDH9UR_nlybbHiihtO477f1m9RzvdxR56gDspRnDRtET7QJNpp4W8SKpQPgXWE5_6GuUNGtniPndqWpMk',
+);
+
+        if (fcmToken != null) {
+          await userDoc.set(
+            {'fcmToken': fcmToken},
+            SetOptions(merge: true),
+          );
+        }
+
+        // Además, si es instructor, también actualizar instructorSettings
+        if (fcmToken != null) {
+          final settingsDoc = await FirebaseFirestore.instance
               .collection('instructorSettings')
               .doc(user.uid)
-              .update({'fcmToken': fcmToken});
+              .get();
+          if (settingsDoc.exists && settingsDoc.data()?['role'] == 'instructor') {
+            await FirebaseFirestore.instance
+                .collection('instructorSettings')
+                .doc(user.uid)
+                .update({'fcmToken': fcmToken});
+          }
         }
       }
 

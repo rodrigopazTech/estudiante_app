@@ -1,13 +1,62 @@
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
+const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const admin = require('firebase-admin');
 const { google } = require('googleapis');
 
 admin.initializeApp();
 const db = admin.firestore();
 
+// CONFIGURACIÓN CENTRALIZADA
+const DRIVE_FOLDER_ID = '1Wm18WvrcT5p2kmyR7I5ctqGx7c0305xN';
+const CALENDAR_ID = '583cf5eb729124a38b36cbd53379afde9b89883be84bb4bd4da8ca7ff83c7ddc@group.calendar.google.com';
+
 // ─────────────────────────────────────────────
-// FUNCIÓN 1: Validar asistencia (llamada por el alumno)
+// 1. ONBOARDING AUTOMÁTICO (NUEVA)
+// ─────────────────────────────────────────────
+exports.onStudentSignup = onDocumentCreated('users/{uid}', async (event) => {
+  const userData = event.data.data();
+  const email = userData.email;
+
+  if (!email) return;
+
+  const auth = new google.auth.GoogleAuth({
+    scopes: [
+      'https://www.googleapis.com/auth/drive.file',
+      'https://www.googleapis.com/auth/calendar.events'
+    ],
+  });
+  const authClient = await auth.getClient();
+
+  try {
+    const drive = google.drive({ version: 'v3', auth: authClient });
+    await drive.permissions.create({
+      fileId: DRIVE_FOLDER_ID,
+      requestBody: { role: 'reader', type: 'user', emailAddress: email },
+    });
+    console.log(`Acceso a Drive concedido a ${email}`);
+  } catch (err) { console.error('Error Drive:', err.message); }
+
+  try {
+    const calendar = google.calendar({ version: 'v3', auth: authClient });
+    const response = await calendar.events.list({ calendarId: CALENDAR_ID, q: 'Flutter Clase' });
+    const events = response.data.items || [];
+    for (const ev of events) {
+      const attendees = ev.attendees || [];
+      attendees.push({ email: email });
+      await calendar.events.patch({
+        calendarId: CALENDAR_ID,
+        eventId: ev.id,
+        requestBody: { attendees: attendees },
+        sendUpdates: 'all',
+      });
+    }
+    console.log(`Usuario ${email} invitado al calendario.`);
+  } catch (err) { console.error('Error Calendar:', err.message); }
+});
+
+// ─────────────────────────────────────────────
+// 2. VALIDAR ASISTENCIA (ORIGINAL)
 // ─────────────────────────────────────────────
 exports.validateAttendance = onCall(async (request) => {
   if (!request.auth) {
@@ -43,7 +92,6 @@ exports.validateAttendance = onCall(async (request) => {
     return { success: false, message: 'Código de asistencia incorrecto.' };
   }
 
-  // Verificar si ya registró asistencia
   const existing = await db.collection('attendance')
     .where('uid', '==', uid)
     .where('classId', '==', classId)
@@ -53,14 +101,12 @@ exports.validateAttendance = onCall(async (request) => {
     return { success: false, message: 'Ya has registrado tu asistencia para esta clase.' };
   }
 
-  // Registrar asistencia
   await db.collection('attendance').add({
     uid,
     classId,
     timestamp: admin.firestore.FieldValue.serverTimestamp(),
   });
 
-  // Actualizar racha y total del usuario
   const userRef = db.collection('users').doc(uid);
   await db.runTransaction(async (tx) => {
     const userDoc = await tx.get(userRef);
@@ -74,27 +120,22 @@ exports.validateAttendance = onCall(async (request) => {
 });
 
 // ─────────────────────────────────────────────
-// FUNCIÓN 2: Generar códigos desde Google Calendar
-// Se ejecuta cada 15 minutos. Detecta clases "Flutter Clase..."
-// que inician en ~1 hora y genera el código de asistencia.
+// 3. GENERAR CÓDIGOS DE ASISTENCIA (ORIGINAL)
 // ─────────────────────────────────────────────
 exports.generateAttendanceCodes = onSchedule(
   { schedule: '*/15 * * * *', timeZone: 'America/Mexico_City' },
   async (event) => {
     const nodemailer = require('nodemailer');
-
     const gmailUser   = process.env.GMAIL_USER   || '';
     const gmailPass   = process.env.GMAIL_PASS   || '';
-    const calendarId  = process.env.CALENDAR_ID  || '';
+    const calendarId  = CALENDAR_ID;
 
-    // ── Autenticación con Google Calendar vía cuenta de servicio ──
     const auth = new google.auth.GoogleAuth({
       scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
     });
     const authClient = await auth.getClient();
     const calendar = google.calendar({ version: 'v3', auth: authClient });
 
-    // ── Ventana de detección: eventos que inician entre 55 y 75 min ──
     const now = new Date();
     const windowStart = new Date(now.getTime() + 55 * 60 * 1000);
     const windowEnd   = new Date(now.getTime() + 75 * 60 * 1000);
@@ -107,7 +148,7 @@ exports.generateAttendanceCodes = onSchedule(
         timeMax: windowEnd.toISOString(),
         singleEvents: true,
         orderBy: 'startTime',
-        q: 'Flutter Clase',          // Filtrar por nombre
+        q: 'Flutter Clase',
       });
       events = response.data.items || [];
     } catch (err) {
@@ -115,21 +156,7 @@ exports.generateAttendanceCodes = onSchedule(
       return null;
     }
 
-    if (events.length === 0) {
-      console.log('No hay clases "Flutter Clase" próximas en la próxima hora.');
-      return null;
-    }
-
-    // ── Leer preferencias del instructor (rol B: campo role == "instructor") ──
-    const instructorsSnap = await db.collection('instructorSettings')
-      .where('role', '==', 'instructor')
-      .limit(1)
-      .get();
-
-    const instructorData = instructorsSnap.empty ? {} : instructorsSnap.docs[0].data();
-    const emailEnabled = instructorData.emailEnabled !== false; // default true
-    const pushEnabled  = instructorData.pushEnabled  !== false; // default true
-    const fcmToken     = instructorData.fcmToken     || null;
+    if (events.length === 0) return null;
 
     const mailTransport = nodemailer.createTransport({
       service: 'gmail',
@@ -138,92 +165,101 @@ exports.generateAttendanceCodes = onSchedule(
 
     for (const ev of events) {
       const eventId   = ev.id;
-      const eventName = ev.summary || 'Flutter Clase';
-      const startTime = ev.start.dateTime || ev.start.date;
-      const startDate = new Date(startTime);
-
-      // ── Evitar duplicados ──
-      const existingDoc = await db.collection('classes').doc(eventId).get();
-      if (existingDoc.exists && existingDoc.data().attendanceCode) {
-        console.log(`Clase "${eventName}" ya tiene código, saltando.`);
-        continue;
-      }
-
-      // ── Generar código de 6 dígitos ──
       const code = Math.floor(100000 + Math.random() * 900000).toString();
 
-      // ── Guardar en Firestore ──
       await db.collection('classes').doc(eventId).set({
         eventId,
-        name: eventName,
-        dateTime: admin.firestore.Timestamp.fromDate(startDate),
+        title: ev.summary,
+        dateTime: admin.firestore.Timestamp.fromDate(new Date(ev.start.dateTime || ev.start.date)),
         attendanceCode: code,
         codeGeneratedAt: admin.firestore.FieldValue.serverTimestamp(),
       }, { merge: true });
 
-      console.log(`Código ${code} generado para "${eventName}" (${startTime})`);
-
-      const timeLabel = startDate.toLocaleTimeString('es-MX', {
-        hour: '2-digit', minute: '2-digit', timeZone: 'America/Mexico_City',
-      });
-
-      // ── Notificación por correo ──
-      if (emailEnabled && gmailUser) {
-        const mailOptions = {
-          from: `"App Asistencia Estudiantes" <${gmailUser}>`,
-          to: gmailUser,
-          subject: `🔐 Código de Asistencia — ${eventName}`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 24px;">
-              <h2 style="color: #1a73e8; margin-bottom: 8px;">Código de Asistencia</h2>
-              <p style="color: #555;">Tu clase comienza a las <strong>${timeLabel}</strong></p>
-              <div style="background: #f0f4ff; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0;">
-                <p style="margin: 0; font-size: 14px; color: #888;">Código</p>
-                <p style="margin: 8px 0 0; font-size: 48px; font-weight: bold; letter-spacing: 10px; color: #1a73e8;">${code}</p>
-              </div>
-              <p style="color: #888;">${eventName}</p>
-              <p style="color: #aaa; font-size: 12px;">Válido durante la clase. No lo compartas antes de que inicie.</p>
-            </div>
-          `,
-        };
-        try {
-          await mailTransport.sendMail(mailOptions);
-          console.log(`Correo enviado para "${eventName}"`);
-        } catch (mailErr) {
-          console.error('Error al enviar correo:', mailErr.message);
-        }
-      }
-
-      // ── Notificación push (FCM) ──
-      if (pushEnabled && fcmToken) {
-        try {
-          await admin.messaging().send({
-            token: fcmToken,
-            notification: {
-              title: `🔐 Código listo: ${eventName}`,
-              body: `Código: ${code} — Clase a las ${timeLabel}`,
-            },
-            data: {
-              classId: eventId,
-              code,
-              className: eventName,
-            },
-          });
-          console.log(`Push enviado para "${eventName}"`);
-        } catch (pushErr) {
-          console.error('Error al enviar push:', pushErr.message);
-        }
+      if (gmailUser) {
+        await mailTransport.sendMail({
+          from: gmailUser, to: gmailUser,
+          subject: `🔐 Código de Asistencia — ${ev.summary}`,
+          text: `Código: ${code}`,
+        });
       }
     }
-
     return null;
   }
 );
 
 // ─────────────────────────────────────────────
-// FUNCIÓN 3: Webhook de sincronización con Calendar (placeholder)
+// 4. IMPORTAR CLASES PASADAS (ORIGINAL)
 // ─────────────────────────────────────────────
-exports.syncCalendarWebhook = onRequest(async (req, res) => {
-  console.log('Calendar Sync Webhook received notification.');
-  res.status(200).send('OK');
+exports.importPastClasses = onRequest(async (req, res) => {
+  const auth = new google.auth.GoogleAuth({
+    scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
+  });
+  const authClient = await auth.getClient();
+  const calendar = google.calendar({ version: 'v3', auth: authClient });
+
+  const courseStart = new Date('2025-01-01T00:00:00Z');
+  const response = await calendar.events.list({
+    calendarId: CALENDAR_ID,
+    timeMin: courseStart.toISOString(),
+    timeMax: new Date().toISOString(),
+    singleEvents: true,
+    q: 'Flutter Clase',
+  });
+
+  const events = response.data.items || [];
+  for (const ev of events) {
+    await db.collection('classes').doc(ev.id).set({
+      eventId: ev.id,
+      title: ev.summary,
+      dateTime: admin.firestore.Timestamp.fromDate(new Date(ev.start.dateTime || ev.start.date)),
+      importedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+  }
+
+  return res.json({ imported: events.length });
 });
+
+// ─────────────────────────────────────────────
+// 5. SINCRONIZAR CLASES Y DRIVE (OPTIMIZADA)
+// ─────────────────────────────────────────────
+exports.syncUpcomingClasses = onSchedule(
+  { schedule: '*/15 * * * *', timeZone: 'America/Mexico_City' },
+  async () => {
+    const auth = new google.auth.GoogleAuth({
+      scopes: [
+        'https://www.googleapis.com/auth/calendar.readonly',
+        'https://www.googleapis.com/auth/drive.readonly'
+      ],
+    });
+    const authClient = await auth.getClient();
+
+    // Sincronizar Calendario
+    const calendar = google.calendar({ version: 'v3', auth: authClient });
+    const calRes = await calendar.events.list({ calendarId: CALENDAR_ID, q: 'Flutter Clase' });
+    const events = calRes.data.items || [];
+    for (const ev of events) {
+      await db.collection('classes').doc(ev.id).set({
+        title: ev.summary,
+        dateTime: admin.firestore.Timestamp.fromDate(new Date(ev.start.dateTime || ev.start.date)),
+        meetLink: ev.location,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+
+    // Sincronizar Drive (NUEVO)
+    const drive = google.drive({ version: 'v3', auth: authClient });
+    const driveRes = await drive.files.list({
+      q: `'${DRIVE_FOLDER_ID}' in parents and trashed = false`,
+      fields: 'files(id, name, webViewLink, iconLink, mimeType)',
+    });
+    const files = driveRes.data.files || [];
+    for (const file of files) {
+      await db.collection('resources').doc(file.id).set({
+        name: file.name,
+        link: file.webViewLink,
+        type: file.mimeType,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+  }
+);
