@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/services.dart';
+
+
+import 'video_player_screen.dart';
+import 'drive_explorer_screen.dart';
 
 class MaterialsScreen extends StatelessWidget {
   const MaterialsScreen({super.key});
@@ -273,28 +278,87 @@ class MaterialsScreen extends StatelessWidget {
                     _buildSheetAction(
                       context,
                       'Ver grabación',
-                      'Grabación de la sesión',
+                      'Reproducir video de la sesión',
                       Icons.videocam_rounded,
                       const Color(0xFF0058BC),
-                      recording,
+                      recording != null,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => VideoPlayerScreen(
+                            videoUrl: recording!,
+                            title: title,
+                          ),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     _buildSheetAction(
                       context,
-                      'Ver código (Drive)',
-                      'Código y recursos de la clase',
+                      'Ver código',
+                      'Explorar archivos fuente (.dart, .js)',
                       Icons.code_rounded,
                       const Color(0xFF414755),
-                      drive,
+                      drive != null,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DriveExplorerScreen(
+                            folderUrl: drive!,
+                            title: title,
+                            mode: 'code',
+                          ),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     _buildSheetAction(
                       context,
                       'Ver documentos',
-                      'Slides, apuntes y ejercicios',
+                      'Slides, PDF y notas de clase',
                       Icons.description_rounded,
                       const Color(0xFF414755),
-                      doc,
+                      drive != null,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DriveExplorerScreen(
+                            folderUrl: drive!,
+                            title: title,
+                            mode: 'docs',
+                          ),
+                        ),
+                      ),
+                    ),
+                    const Divider(height: 32, indent: 16, endIndent: 16),
+                    _buildSheetAction(
+                      context,
+                      'Explorar en Drive',
+                      'Abrir carpeta completa en Google Drive',
+                      Icons.open_in_new_rounded,
+                      const Color(0xFF717786),
+                      drive != null,
+                      () => _launchUrl(drive!),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildSheetAction(
+                      context,
+                      'Compartir materiales',
+                      'Enviar link de la carpeta a un compañero',
+                      Icons.share_outlined,
+                      const Color(0xFF0058BC),
+                      drive != null,
+                      () async {
+                        await Clipboard.setData(ClipboardData(
+                          text: '¡Hola! Te comparto los materiales de la sesión $title: $drive',
+                        ));
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('🔗 Link copiado al portapapeles')),
+                          );
+                        }
+                      },
                     ),
                   ],
                 ),
@@ -307,23 +371,21 @@ class MaterialsScreen extends StatelessWidget {
   }
 
   Widget _buildSheetAction(BuildContext context, String title, String subtitle,
-      IconData icon, Color color, String? url) {
-    final bool isDisabled = url == null;
-
+      IconData icon, Color color, bool isEnabled, VoidCallback onTap) {
     return Opacity(
-      opacity: isDisabled ? 0.4 : 1.0,
+      opacity: isEnabled ? 1.0 : 0.4,
       child: InkWell(
-        onTap: isDisabled
-            ? null
-            : () {
+        onTap: isEnabled
+            ? () {
                 Navigator.pop(context);
-                _launchUrl(url);
-              },
+                onTap();
+              }
+            : null,
         borderRadius: BorderRadius.circular(24),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: url != null && color == const Color(0xFF0058BC)
+            color: isEnabled && color == const Color(0xFF0058BC)
                 ? const Color(0xFF0058BC).withOpacity(0.05)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(24),
@@ -334,10 +396,10 @@ class MaterialsScreen extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: isDisabled ? Colors.grey.shade200 : color.withOpacity(0.1),
+                  color: !isEnabled ? Colors.grey.shade200 : color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(icon, color: isDisabled ? Colors.grey : color),
+                child: Icon(icon, color: !isEnabled ? Colors.grey : color),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -349,7 +411,7 @@ class MaterialsScreen extends StatelessWidget {
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: isDisabled ? Colors.grey : const Color(0xFF181C23),
+                        color: !isEnabled ? Colors.grey : const Color(0xFF181C23),
                       ),
                     ),
                     Text(

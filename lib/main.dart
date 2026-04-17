@@ -8,20 +8,31 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'firebase_options.dart';
-
 import 'screens/calendar_screen.dart';
 import 'screens/materials_screen.dart';
 import 'screens/profile_screen.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('es_ES', null);
-  
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+// Instancia global con permisos de Drive y Calendario
+final GoogleSignIn googleSignIn = GoogleSignIn(
+  scopes: [
+    'https://www.googleapis.com/auth/drive.readonly',
+    'https://www.googleapis.com/auth/calendar',
+  ],
+);
 
+
+
+void main() {
+  // runApp de inmediato — sin bloquear con awaits
   runApp(const EstudianteApp());
+}
+
+Future<void> _initializeApp() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Future.wait([
+    Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform),
+    initializeDateFormatting('es_ES', null),
+  ]);
 }
 
 class EstudianteApp extends StatelessWidget {
@@ -58,7 +69,58 @@ class EstudianteApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const AuthWrapper(),
+      home: FutureBuilder<void>(
+        future: _initializeApp(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const _SplashScreen();
+          }
+          if (snapshot.hasError) {
+            return Scaffold(
+              body: Center(child: Text('Error al iniciar: ${snapshot.error}')),
+            );
+          }
+          return const AuthWrapper();
+        },
+      ),
+    );
+  }
+}
+
+class _SplashScreen extends StatelessWidget {
+  const _SplashScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: Color(0xFF0058BC),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.school_rounded, size: 72, color: Colors.white),
+            SizedBox(height: 24),
+            Text(
+              'Estudiante App',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+              ),
+            ),
+            SizedBox(height: 32),
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white54),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -97,7 +159,7 @@ class LoginScreen extends StatelessWidget {
 
   Future<void> _signInWithGoogle(BuildContext context) async {
     try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       if (googleUser == null) return;
 
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
