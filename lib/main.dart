@@ -7,10 +7,13 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'screens/calendar_screen.dart';
 import 'screens/materials_screen.dart';
 import 'screens/profile_screen.dart';
+import 'theme/app_theme.dart';
+import 'theme/theme_provider.dart';
 
 // Instancia global con permisos de Drive y Calendario
 final GoogleSignIn googleSignIn = GoogleSignIn(
@@ -23,8 +26,12 @@ final GoogleSignIn googleSignIn = GoogleSignIn(
 
 
 void main() {
-  // runApp de inmediato — sin bloquear con awaits
-  runApp(const EstudianteApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: const EstudianteApp(),
+    ),
+  );
 }
 
 Future<void> _initializeApp() async {
@@ -35,42 +42,34 @@ Future<void> _initializeApp() async {
   ]);
 }
 
-class EstudianteApp extends StatelessWidget {
+class EstudianteApp extends StatefulWidget {
   const EstudianteApp({super.key});
 
   @override
+  State<EstudianteApp> createState() => _EstudianteAppState();
+}
+
+class _EstudianteAppState extends State<EstudianteApp> {
+  // ✅ El Future se crea UNA sola vez en initState, no en cada rebuild
+  late final Future<void> _initFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _initFuture = _initializeApp();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Estudiante App',
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF0058BC),
-          surface: const Color(0xFFF9F9FF),
-          primary: const Color(0xFF0058BC),
-          onPrimary: Colors.white,
-          onSurface: const Color(0xFF181C23),
-        ),
-        textTheme: GoogleFonts.interTextTheme(
-          Theme.of(context).textTheme,
-        ).copyWith(
-          displayLarge: GoogleFonts.plusJakartaSans(
-            fontWeight: FontWeight.w800,
-            color: const Color(0xFF181C23),
-          ),
-          headlineLarge: GoogleFonts.plusJakartaSans(
-            fontWeight: FontWeight.w800,
-            color: const Color(0xFF181C23),
-          ),
-          titleLarge: GoogleFonts.plusJakartaSans(
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF181C23),
-          ),
-        ),
-      ),
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: themeProvider.themeMode,
       home: FutureBuilder<void>(
-        future: _initializeApp(),
+        future: _initFuture, // ✅ Reutiliza el mismo Future, no crea uno nuevo
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
             return const _SplashScreen();
@@ -526,6 +525,7 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -535,10 +535,9 @@ class _MainNavigationState extends State<MainNavigation> {
             fontSize: 22,
           ),
         ),
-        backgroundColor: const Color(0xFFF1F3FE),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: Icon(Icons.logout, color: cs.onSurface),
             onPressed: () => FirebaseAuth.instance.signOut(),
           ),
         ],
@@ -547,7 +546,8 @@ class _MainNavigationState extends State<MainNavigation> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) => setState(() => _selectedIndex = index),
-        indicatorColor: const Color(0xFFA1BEFD),
+        indicatorColor: cs.secondary.withOpacity(0.25),
+        backgroundColor: cs.surfaceContainerLow,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.calendar_month_outlined),
