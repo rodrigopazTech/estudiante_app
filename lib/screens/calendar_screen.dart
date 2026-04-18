@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../theme/app_theme.dart';
 
 class CalendarScreen extends StatelessWidget {
   const CalendarScreen({super.key});
@@ -13,8 +14,10 @@ class CalendarScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
 
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F9FF),
+      backgroundColor: cs.surface,
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('classes')
@@ -42,12 +45,12 @@ class CalendarScreen extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'YOUR MOMENTUM',
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF0058BC),
+                            color: cs.primary,
                             letterSpacing: 1.5,
                           ),
                         ),
@@ -57,7 +60,7 @@ class CalendarScreen extends StatelessWidget {
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 32,
                             fontWeight: FontWeight.w800,
-                            color: const Color(0xFF181C23),
+                            color: cs.onSurface,
                             letterSpacing: -1.0,
                           ),
                         ),
@@ -170,6 +173,8 @@ class CalendarScreen extends StatelessWidget {
     required bool isToday,
     required bool isFuture,
   }) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final dateStr = DateFormat('MMM dd').format(dateTime);
     final timeStr =
         '${DateFormat('hh:mm a').format(dateTime)} - ${DateFormat('hh:mm a').format(dateTime.add(const Duration(hours: 1, minutes: 30)))}';
@@ -178,13 +183,17 @@ class CalendarScreen extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 24),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: isActive ? Colors.white : const Color(0xFFF1F3FE),
+        color: isDark
+            ? (isActive ? AppTheme.darkSurfaceCard2 : AppTheme.darkSurfaceCard)
+            : (isActive ? Colors.white : const Color(0xFFF1F3FE)),
         borderRadius: BorderRadius.circular(24),
         boxShadow: isActive
             ? [
                 BoxShadow(
-                  color: const Color(0xFF181C23).withOpacity(0.04),
-                  blurRadius: 30,
+                  color: isDark
+                      ? cs.primary.withOpacity(0.12)
+                      : const Color(0xFF181C23).withOpacity(0.04),
+                  blurRadius: isDark ? 40 : 30,
                   offset: const Offset(0, 8),
                 ),
               ]
@@ -201,10 +210,10 @@ class CalendarScreen extends StatelessWidget {
                 children: [
                   Text(
                     dateStr,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF0058BC),
+                      color: cs.primary,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -213,7 +222,7 @@ class CalendarScreen extends StatelessWidget {
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
-                      color: const Color(0xFF181C23),
+                      color: cs.onSurface,
                       height: 1.1,
                     ),
                   ),
@@ -250,15 +259,15 @@ class CalendarScreen extends StatelessWidget {
           const SizedBox(height: 16),
           Row(
             children: [
-              const Icon(Icons.schedule_rounded,
-                  color: Color(0xFF414755), size: 16),
+              Icon(Icons.schedule_rounded,
+                  color: cs.onSurfaceVariant, size: 16),
               const SizedBox(width: 8),
               Text(
                 timeStr,
                 style: GoogleFonts.inter(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: const Color(0xFF414755),
+                  color: cs.onSurfaceVariant,
                 ),
               ),
             ],
@@ -268,7 +277,7 @@ class CalendarScreen extends StatelessWidget {
             description,
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: const Color(0xFF414755).withOpacity(0.8),
+              color: cs.onSurfaceVariant.withOpacity(0.85),
               height: 1.5,
             ),
             maxLines: 2,
@@ -280,12 +289,29 @@ class CalendarScreen extends StatelessWidget {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: isActive ? () => _launchUrl(meetLink) : null,
-                  icon: const Icon(Icons.videocam_rounded, size: 18),
-                  label: const Text('Unirse a Meet'),
+                  icon: Icon(
+                    Icons.videocam_rounded,
+                    size: 18,
+                    color: isActive
+                        ? cs.onPrimary
+                        : cs.onSurfaceVariant,
+                  ),
+                  label: Text(
+                    'Unirse a Meet',
+                    style: TextStyle(
+                      color: isActive
+                          ? cs.onPrimary
+                          : cs.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0058BC),
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: Colors.grey.shade300,
+                    backgroundColor: isActive
+                        ? cs.primary
+                        : cs.surfaceContainerLow,
+                    disabledBackgroundColor: isDark
+                        ? AppTheme.darkSurfaceCard2
+                        : Colors.grey.shade200,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: const StadiumBorder(),
                     elevation: 0,
@@ -298,12 +324,29 @@ class CalendarScreen extends StatelessWidget {
                   onPressed: isActive || isFuture
                       ? () => _showAttendanceDialog(context, classId)
                       : null,
-                  icon: const Icon(Icons.check_circle_rounded, size: 18),
-                  label: const Text('Validar Asistencia'),
+                  icon: Icon(
+                    Icons.check_circle_rounded,
+                    size: 18,
+                    color: (isActive || isFuture)
+                        ? cs.onSecondaryContainer
+                        : cs.onSurfaceVariant,
+                  ),
+                  label: Text(
+                    'Validar Asistencia',
+                    style: TextStyle(
+                      color: (isActive || isFuture)
+                          ? cs.onSecondaryContainer
+                          : cs.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFA1BEFD),
-                    foregroundColor: const Color(0xFF2D4C83),
-                    disabledBackgroundColor: Colors.transparent,
+                    backgroundColor: (isActive || isFuture)
+                        ? cs.secondaryContainer
+                        : cs.surfaceContainerLow,
+                    disabledBackgroundColor: isDark
+                        ? AppTheme.darkSurfaceCard2
+                        : Colors.grey.shade200,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: const StadiumBorder(),
                     elevation: 0,
@@ -321,6 +364,8 @@ class CalendarScreen extends StatelessWidget {
     final List<TextEditingController> controllers =
         List.generate(6, (index) => TextEditingController());
     final List<FocusNode> focusNodes = List.generate(6, (index) => FocusNode());
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showDialog(
       context: context,
@@ -332,15 +377,20 @@ class CalendarScreen extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isDark ? AppTheme.darkSurfaceCard : Colors.white,
               borderRadius: BorderRadius.circular(32),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: isDark
+                      ? cs.primary.withOpacity(0.15)
+                      : Colors.black.withOpacity(0.1),
                   blurRadius: 40,
                   offset: const Offset(0, 20),
                 ),
               ],
+              border: isDark
+                  ? Border.all(color: cs.primary.withOpacity(0.15))
+                  : null,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -348,12 +398,12 @@ class CalendarScreen extends StatelessWidget {
                 Container(
                   width: 64,
                   height: 64,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFD8E2FF),
+                  decoration: BoxDecoration(
+                    color: cs.primary.withOpacity(isDark ? 0.15 : 0.12),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.fingerprint_rounded,
-                      color: Color(0xFF0058BC), size: 32),
+                  child: Icon(Icons.fingerprint_rounded,
+                      color: cs.primary, size: 32),
                 ),
                 const SizedBox(height: 24),
                 Text(
@@ -361,7 +411,7 @@ class CalendarScreen extends StatelessWidget {
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
-                    color: const Color(0xFF181C23),
+                    color: cs.onSurface,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -370,7 +420,7 @@ class CalendarScreen extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    color: const Color(0xFF414755),
+                    color: cs.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -390,14 +440,22 @@ class CalendarScreen extends StatelessWidget {
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 20,
                           fontWeight: FontWeight.w800,
+                          color: cs.onSurface,
                         ),
                         decoration: InputDecoration(
                           counterText: '',
                           filled: true,
-                          fillColor: const Color(0xFFF1F3FE),
+                          fillColor: isDark
+                              ? AppTheme.darkSurfaceCard2
+                              : const Color(0xFFF1F3FE),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                                color: cs.primary.withOpacity(0.6), width: 2),
                           ),
                         ),
                         onChanged: (value) {
@@ -412,6 +470,7 @@ class CalendarScreen extends StatelessWidget {
                   }),
                 ),
                 const SizedBox(height: 32),
+
                 SizedBox(
                   width: double.infinity,
                   height: 56,
@@ -425,14 +484,19 @@ class CalendarScreen extends StatelessWidget {
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0058BC),
-                      foregroundColor: Colors.white,
+                      backgroundColor: cs.primary,
+                      foregroundColor: cs.onPrimary,
                       shape: const StadiumBorder(),
                       elevation: 0,
                     ),
-                    child: const Text('Enviar',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
+                    child: Text(
+                      'Enviar',
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: cs.onPrimary,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -441,7 +505,7 @@ class CalendarScreen extends StatelessWidget {
                   child: Text(
                     'Cancelar',
                     style: GoogleFonts.inter(
-                      color: const Color(0xFF414755),
+                      color: cs.onSurfaceVariant,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

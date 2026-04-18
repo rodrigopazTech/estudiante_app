@@ -3,8 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
-
-
+import '../theme/app_theme.dart';
 import 'video_player_screen.dart';
 import 'drive_explorer_screen.dart';
 
@@ -13,8 +12,11 @@ class MaterialsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F9FF),
+      backgroundColor: cs.surface,
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('classes')
@@ -22,12 +24,18 @@ class MaterialsScreen extends StatelessWidget {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: CircularProgressIndicator(color: cs.primary),
+            );
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(
-                child: Text('No hay materiales disponibles todavía.'));
+            return Center(
+              child: Text(
+                'No hay materiales disponibles todavía.',
+                style: TextStyle(color: cs.onSurfaceVariant),
+              ),
+            );
           }
 
           return SingleChildScrollView(
@@ -41,7 +49,7 @@ class MaterialsScreen extends StatelessWidget {
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 32,
                     fontWeight: FontWeight.w800,
-                    color: const Color(0xFF181C23),
+                    color: cs.onSurface,
                     letterSpacing: -1.0,
                   ),
                 ),
@@ -51,7 +59,7 @@ class MaterialsScreen extends StatelessWidget {
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: const Color(0xFF414755).withOpacity(0.7),
+                    color: cs.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 40),
@@ -77,6 +85,8 @@ class MaterialsScreen extends StatelessWidget {
                         recordingLink,
                         driveLink,
                         docLink,
+                        cs,
+                        isDark,
                       );
                     }
 
@@ -86,10 +96,12 @@ class MaterialsScreen extends StatelessWidget {
                       recordingLink,
                       driveLink,
                       docLink,
+                      cs,
+                      isDark,
                     );
                   },
                 ),
-                const SizedBox(height: 100), // Space for bottom nav
+                const SizedBox(height: 100),
               ],
             ),
           );
@@ -98,21 +110,32 @@ class MaterialsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFeaturedCard(BuildContext context, String title, String? recording,
-      String? drive, String? doc) {
+  Widget _buildFeaturedCard(
+    BuildContext context,
+    String title,
+    String? recording,
+    String? drive,
+    String? doc,
+    ColorScheme cs,
+    bool isDark,
+  ) {
     return GestureDetector(
       onTap: () => _showMaterialOptions(context, title, recording, drive, doc),
       child: Container(
         margin: const EdgeInsets.only(bottom: 24),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? AppTheme.darkSurfaceCard2 : Colors.white,
           borderRadius: BorderRadius.circular(32),
-          border: Border.all(color: const Color(0xFF0058BC).withOpacity(0.05)),
+          border: isDark
+              ? Border.all(color: cs.primary.withOpacity(0.15))
+              : Border.all(color: cs.primary.withOpacity(0.05)),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF181C23).withOpacity(0.04),
-              blurRadius: 24,
+              color: isDark
+                  ? cs.primary.withOpacity(0.10)
+                  : const Color(0xFF181C23).withOpacity(0.04),
+              blurRadius: isDark ? 40 : 24,
               offset: const Offset(0, 8),
             ),
           ],
@@ -123,27 +146,28 @@ class MaterialsScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'SEMANA ACTUAL',
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF0058BC),
+                    color: cs.primary,
                     letterSpacing: 1.5,
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF72FE88).withOpacity(0.2),
+                    color: cs.tertiary.withOpacity(isDark ? 0.15 : 0.12),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text(
+                  child: Text(
                     'ÚLTIMA SESIÓN',
                     style: TextStyle(
                       fontSize: 9,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF006B27),
+                      color: cs.tertiary,
                     ),
                   ),
                 ),
@@ -155,7 +179,7 @@ class MaterialsScreen extends StatelessWidget {
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
-                color: const Color(0xFF181C23),
+                color: cs.onSurface,
                 height: 1.2,
               ),
             ),
@@ -165,15 +189,22 @@ class MaterialsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSessionListItem(BuildContext context, String title,
-      String? recording, String? drive, String? doc) {
+  Widget _buildSessionListItem(
+    BuildContext context,
+    String title,
+    String? recording,
+    String? drive,
+    String? doc,
+    ColorScheme cs,
+    bool isDark,
+  ) {
     return GestureDetector(
       onTap: () => _showMaterialOptions(context, title, recording, drive, doc),
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: const Color(0xFFF1F3FE),
+          color: isDark ? AppTheme.darkSurfaceCard : const Color(0xFFF1F3FE),
           borderRadius: BorderRadius.circular(24),
         ),
         child: Row(
@@ -181,11 +212,21 @@ class MaterialsScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isDark
+                    ? cs.primary.withOpacity(0.12)
+                    : Colors.white,
                 borderRadius: BorderRadius.circular(16),
+                boxShadow: isDark
+                    ? [
+                        BoxShadow(
+                          color: cs.primary.withOpacity(0.15),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]
+                    : null,
               ),
-              child: const Icon(Icons.event_note_rounded,
-                  color: Color(0xFF0058BC), size: 24),
+              child: Icon(Icons.event_note_rounded, color: cs.primary, size: 24),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -197,7 +238,7 @@ class MaterialsScreen extends StatelessWidget {
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF181C23),
+                      color: cs.onSurface,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -206,13 +247,13 @@ class MaterialsScreen extends StatelessWidget {
                     'Materiales de la sesión',
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: const Color(0xFF414755).withOpacity(0.7),
+                      color: cs.onSurfaceVariant,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: Color(0xFF717786)),
+            Icon(Icons.chevron_right_rounded, color: cs.onSurfaceVariant),
           ],
         ),
       ),
@@ -221,15 +262,19 @@ class MaterialsScreen extends StatelessWidget {
 
   void _showMaterialOptions(BuildContext context, String title, String? recording,
       String? drive, String? doc) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) {
         return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.darkSurfaceCard : Colors.white,
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(32)),
           ),
           padding: const EdgeInsets.only(top: 12, bottom: 48),
           child: Column(
@@ -239,7 +284,9 @@ class MaterialsScreen extends StatelessWidget {
                 width: 48,
                 height: 6,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE6E8F3),
+                  color: isDark
+                      ? cs.primary.withOpacity(0.25)
+                      : const Color(0xFFE6E8F3),
                   borderRadius: BorderRadius.circular(3),
                 ),
               ),
@@ -249,12 +296,12 @@ class MaterialsScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'OPCIONES DE RECURSO',
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF0058BC),
+                        color: cs.primary,
                         letterSpacing: 1.5,
                       ),
                     ),
@@ -264,7 +311,7 @@ class MaterialsScreen extends StatelessWidget {
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
-                        color: const Color(0xFF181C23),
+                        color: cs.onSurface,
                       ),
                     ),
                   ],
@@ -280,8 +327,10 @@ class MaterialsScreen extends StatelessWidget {
                       'Ver grabación',
                       'Reproducir video de la sesión',
                       Icons.videocam_rounded,
-                      const Color(0xFF0058BC),
+                      cs.primary,
                       recording != null,
+                      cs,
+                      isDark,
                       () => Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -298,8 +347,10 @@ class MaterialsScreen extends StatelessWidget {
                       'Ver código',
                       'Explorar archivos fuente (.dart, .js)',
                       Icons.code_rounded,
-                      const Color(0xFF414755),
+                      cs.onSurfaceVariant,
                       drive != null,
+                      cs,
+                      isDark,
                       () => Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -317,8 +368,10 @@ class MaterialsScreen extends StatelessWidget {
                       'Ver documentos',
                       'Slides, PDF y notas de clase',
                       Icons.description_rounded,
-                      const Color(0xFF414755),
+                      cs.onSurfaceVariant,
                       drive != null,
+                      cs,
+                      isDark,
                       () => Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -330,14 +383,21 @@ class MaterialsScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const Divider(height: 32, indent: 16, endIndent: 16),
+                    Divider(
+                      height: 32,
+                      indent: 16,
+                      endIndent: 16,
+                      color: cs.outlineVariant.withOpacity(0.4),
+                    ),
                     _buildSheetAction(
                       context,
                       'Explorar en Drive',
                       'Abrir carpeta completa en Google Drive',
                       Icons.open_in_new_rounded,
-                      const Color(0xFF717786),
+                      cs.onSurfaceVariant,
                       drive != null,
+                      cs,
+                      isDark,
                       () => _launchUrl(drive!),
                     ),
                     const SizedBox(height: 8),
@@ -346,16 +406,25 @@ class MaterialsScreen extends StatelessWidget {
                       'Compartir materiales',
                       'Enviar link de la carpeta a un compañero',
                       Icons.share_outlined,
-                      const Color(0xFF0058BC),
+                      cs.primary,
                       drive != null,
+                      cs,
+                      isDark,
                       () async {
                         await Clipboard.setData(ClipboardData(
-                          text: '¡Hola! Te comparto los materiales de la sesión $title: $drive',
+                          text:
+                              '¡Hola! Te comparto los materiales de la sesión $title: $drive',
                         ));
                         if (context.mounted) {
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('🔗 Link copiado al portapapeles')),
+                            SnackBar(
+                              content: const Text('🔗 Link copiado al portapapeles'),
+                              backgroundColor: cs.primary,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                            ),
                           );
                         }
                       },
@@ -370,10 +439,21 @@ class MaterialsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSheetAction(BuildContext context, String title, String subtitle,
-      IconData icon, Color color, bool isEnabled, VoidCallback onTap) {
+  Widget _buildSheetAction(
+    BuildContext context,
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+    bool isEnabled,
+    ColorScheme cs,
+    bool isDark,
+    VoidCallback onTap,
+  ) {
+    final disabledColor = cs.onSurfaceVariant.withOpacity(0.3);
+
     return Opacity(
-      opacity: isEnabled ? 1.0 : 0.4,
+      opacity: isEnabled ? 1.0 : 0.45,
       child: InkWell(
         onTap: isEnabled
             ? () {
@@ -385,8 +465,8 @@ class MaterialsScreen extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isEnabled && color == const Color(0xFF0058BC)
-                ? const Color(0xFF0058BC).withOpacity(0.05)
+            color: isEnabled && color == cs.primary
+                ? cs.primary.withOpacity(isDark ? 0.08 : 0.05)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(24),
           ),
@@ -396,10 +476,15 @@ class MaterialsScreen extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: !isEnabled ? Colors.grey.shade200 : color.withOpacity(0.1),
+                  color: !isEnabled
+                      ? (isDark ? AppTheme.darkSurfaceCard2 : Colors.grey.shade200)
+                      : color.withOpacity(isDark ? 0.15 : 0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(icon, color: !isEnabled ? Colors.grey : color),
+                child: Icon(
+                  icon,
+                  color: !isEnabled ? disabledColor : color,
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -411,14 +496,14 @@ class MaterialsScreen extends StatelessWidget {
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: !isEnabled ? Colors.grey : const Color(0xFF181C23),
+                        color: !isEnabled ? disabledColor : cs.onSurface,
                       ),
                     ),
                     Text(
                       subtitle,
                       style: GoogleFonts.inter(
                         fontSize: 12,
-                        color: const Color(0xFF414755).withOpacity(0.7),
+                        color: cs.onSurfaceVariant,
                       ),
                     ),
                   ],

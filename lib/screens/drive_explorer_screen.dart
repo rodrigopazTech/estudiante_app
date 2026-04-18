@@ -6,15 +6,15 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 
-import '../main.dart'; // Importar la instancia global
-
+import '../main.dart';
+import '../theme/app_theme.dart';
 import 'code_viewer_screen.dart';
 import 'markdown_viewer_screen.dart';
 
 class DriveExplorerScreen extends StatefulWidget {
   final String folderUrl;
   final String title;
-  final String mode; // 'code' or 'docs'
+  final String mode;
 
   const DriveExplorerScreen({
     super.key,
@@ -70,7 +70,6 @@ class _DriveExplorerScreenState extends State<DriveExplorerScreen> {
         final data = json.decode(response.body);
         List<dynamic> allFiles = data['files'] ?? [];
 
-        // Filtrar según el modo
         if (widget.mode == 'code') {
           _files = allFiles.where((f) {
             final name = f['name'].toString().toLowerCase();
@@ -108,10 +107,13 @@ class _DriveExplorerScreenState extends State<DriveExplorerScreen> {
     final name = file['name'].toString();
     final id = file['id'].toString();
 
-    if (name.endsWith('.dart') || name.endsWith('.js') || name.endsWith('.ts') || name.endsWith('.json') || name.endsWith('.md')) {
+    if (name.endsWith('.dart') ||
+        name.endsWith('.js') ||
+        name.endsWith('.ts') ||
+        name.endsWith('.json') ||
+        name.endsWith('.md')) {
       _viewNatively(id, name);
     } else {
-      // Abrir en navegador para el resto (PDFs, Docs nativos)
       final url = Uri.parse(file['webViewLink']);
       if (await canLaunchUrl(url)) {
         await launchUrl(url);
@@ -136,7 +138,7 @@ class _DriveExplorerScreenState extends State<DriveExplorerScreen> {
         headers: {'Authorization': 'Bearer $token'},
       );
 
-      Navigator.pop(context); // Cerrar loading
+      Navigator.pop(context);
       if (!mounted) return;
 
       if (response.statusCode == 200) {
@@ -174,31 +176,40 @@ class _DriveExplorerScreenState extends State<DriveExplorerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F9FF),
+      backgroundColor: cs.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? AppTheme.darkSurfaceCard : Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF181C23)),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: cs.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           widget.mode == 'code' ? 'Archivos de Código' : 'Documentos',
           style: GoogleFonts.plusJakartaSans(
-            color: const Color(0xFF181C23),
+            color: cs.onSurface,
             fontSize: 18,
             fontWeight: FontWeight.w700,
           ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.share_outlined, color: Color(0xFF0058BC)),
+            icon: Icon(Icons.share_outlined, color: cs.primary),
             onPressed: () async {
               await Clipboard.setData(ClipboardData(text: widget.folderUrl));
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('🔗 Link copiado al portapapeles')),
+                  SnackBar(
+                    content: const Text('🔗 Link copiado al portapapeles'),
+                    backgroundColor: cs.primary,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
                 );
               }
             },
@@ -206,19 +217,24 @@ class _DriveExplorerScreenState extends State<DriveExplorerScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(color: cs.primary))
           : _error != null
-              ? Center(child: Text(_error!))
+              ? Center(
+                  child: Text(_error!,
+                      style: TextStyle(color: cs.onSurfaceVariant)))
               : _files.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.folder_open_rounded, size: 64, color: Colors.grey[300]),
+                          Icon(Icons.folder_open_rounded,
+                              size: 64,
+                              color: cs.onSurfaceVariant.withOpacity(0.35)),
                           const SizedBox(height: 16),
                           Text(
                             'No se encontraron archivos.',
-                            style: GoogleFonts.inter(color: Colors.grey),
+                            style: GoogleFonts.inter(
+                                color: cs.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -226,26 +242,31 @@ class _DriveExplorerScreenState extends State<DriveExplorerScreen> {
                   : ListView.separated(
                       padding: const EdgeInsets.all(20),
                       itemCount: _files.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 12),
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         final file = _files[index];
-                        return _buildFileItem(file);
+                        return _buildFileItem(file, cs, isDark);
                       },
                     ),
     );
   }
 
-  Widget _buildFileItem(Map<String, dynamic> file) {
+  Widget _buildFileItem(
+      Map<String, dynamic> file, ColorScheme cs, bool isDark) {
     final name = file['name'].toString();
     IconData iconData = Icons.insert_drive_file_rounded;
-    Color iconColor = const Color(0xFF717786);
+    Color iconColor = cs.onSurfaceVariant;
 
     if (name.endsWith('.dart')) {
       iconData = Icons.code_rounded;
-      iconColor = const Color(0xFF0058BC);
+      iconColor = cs.primary;
     } else if (name.endsWith('.md')) {
       iconData = Icons.description_rounded;
-      iconColor = const Color(0xFF006B27);
+      iconColor = cs.tertiary;
+    } else if (name.endsWith('.js') || name.endsWith('.ts')) {
+      iconData = Icons.code_rounded;
+      iconColor = cs.secondary;
     }
 
     return GestureDetector(
@@ -253,12 +274,14 @@ class _DriveExplorerScreenState extends State<DriveExplorerScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? AppTheme.darkSurfaceCard : Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF181C23).withOpacity(0.04),
-              blurRadius: 12,
+              color: isDark
+                  ? cs.primary.withOpacity(0.06)
+                  : const Color(0xFF181C23).withOpacity(0.04),
+              blurRadius: isDark ? 20 : 12,
               offset: const Offset(0, 4),
             ),
           ],
@@ -268,7 +291,7 @@ class _DriveExplorerScreenState extends State<DriveExplorerScreen> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
+                color: iconColor.withOpacity(isDark ? 0.15 : 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(iconData, color: iconColor, size: 24),
@@ -280,13 +303,13 @@ class _DriveExplorerScreenState extends State<DriveExplorerScreen> {
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: const Color(0xFF181C23),
+                  color: cs.onSurface,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: Color(0xFF717786)),
+            Icon(Icons.chevron_right_rounded, color: cs.onSurfaceVariant),
           ],
         ),
       ),
