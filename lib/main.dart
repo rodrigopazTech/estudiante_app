@@ -224,10 +224,14 @@ class LoginScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
+      backgroundColor: cs.surface,
       body: Stack(
         children: [
-          // Background blue accent blur
+          // Background accent orbs
           Positioned(
             top: -100,
             left: -100,
@@ -235,7 +239,7 @@ class LoginScreen extends StatelessWidget {
               width: 300,
               height: 300,
               decoration: BoxDecoration(
-                color: const Color(0xFF0058BC).withOpacity(0.05),
+                color: cs.primary.withOpacity(isDark ? 0.08 : 0.05),
                 shape: BoxShape.circle,
               ),
             ),
@@ -247,7 +251,7 @@ class LoginScreen extends StatelessWidget {
               width: 250,
               height: 250,
               decoration: BoxDecoration(
-                color: const Color(0xFF006B27).withOpacity(0.05),
+                color: cs.tertiary.withOpacity(isDark ? 0.08 : 0.05),
                 shape: BoxShape.circle,
               ),
             ),
@@ -259,26 +263,28 @@ class LoginScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Branding & Iconography
+                    // App Icon
                     Container(
                       width: 96,
                       height: 96,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: isDark ? AppTheme.darkSurfaceCard : Colors.white,
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF181C23).withOpacity(0.06),
+                            color: isDark
+                                ? cs.primary.withOpacity(0.2)
+                                : const Color(0xFF181C23).withOpacity(0.06),
                             blurRadius: 40,
                             offset: const Offset(0, 24),
                           ),
                         ],
                       ),
                       transform: Matrix4.rotationZ(-0.05),
-                      child: const Icon(
+                      child: Icon(
                         Icons.school_rounded,
                         size: 60,
-                        color: Color(0xFF0058BC),
+                        color: cs.primary,
                       ),
                     ),
                     const SizedBox(height: 32),
@@ -287,13 +293,14 @@ class LoginScreen extends StatelessWidget {
                       style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                             fontSize: 40,
                             letterSpacing: -1.0,
+                            color: cs.onSurface,
                           ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Tu portal de aprendizaje',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: const Color(0xFF414755).withOpacity(0.8),
+                            color: cs.onSurfaceVariant,
                             fontWeight: FontWeight.w500,
                           ),
                     ),
@@ -302,14 +309,18 @@ class LoginScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(32),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: isDark ? AppTheme.darkSurfaceCard : Colors.white,
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
-                          color: const Color(0xFFC1C6D7).withOpacity(0.1),
+                          color: isDark
+                              ? cs.primary.withOpacity(0.12)
+                              : const Color(0xFFC1C6D7).withOpacity(0.1),
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF181C23).withOpacity(0.04),
+                            color: isDark
+                                ? cs.primary.withOpacity(0.08)
+                                : const Color(0xFF181C23).withOpacity(0.04),
                             blurRadius: 48,
                             offset: const Offset(0, 24),
                           ),
@@ -317,12 +328,15 @@ class LoginScreen extends StatelessWidget {
                       ),
                       child: Column(
                         children: [
-                          // Graphic Placeholder
+                          // Hero image
                           Container(
                             height: 160,
                             width: double.infinity,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(16),
+                              color: isDark
+                                  ? AppTheme.darkSurfaceCard2
+                                  : const Color(0xFFF1F3FE),
                               image: const DecorationImage(
                                 image: NetworkImage(
                                     'https://lh3.googleusercontent.com/aida-public/AB6AXuCPsZ46oVLOdNPauz4Ad-OiQNMxeuIchxFVBaP4QqImVNrHE4B8yfwgHYfx1FzTQWPA-CYLDVMUBlGPz1xIl62yHOZqUlf7tn8ye3id3YQJC7PahUazxQfaVk9Kyae9ISHPf-UKkwewhBMZQOybBlzKk0P839ylxcxTmV0eh8HnMW-L0ozRh5PsCxQeyaoRmOKLr36uHG5vB9VvCmHrlExjJvOzgZYlPY_EQ4jZ6DWbd3HLicNCSfQP_fblPTeWXAuMoV1aT9Py6W1s'),
@@ -332,17 +346,17 @@ class LoginScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 24),
-                          // Primary CTA
+                          // Google Sign-In button
                           SizedBox(
                             width: double.infinity,
                             height: 56,
                             child: ElevatedButton(
                               onPressed: () => _signInWithGoogle(context),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF0058BC),
-                                foregroundColor: Colors.white,
+                                backgroundColor: cs.primary,
+                                foregroundColor: cs.onPrimary,
                                 elevation: 4,
-                                shadowColor: const Color(0xFF0058BC).withOpacity(0.4),
+                                shadowColor: cs.primary.withOpacity(0.4),
                                 shape: const StadiumBorder(),
                               ),
                               child: Row(
@@ -361,11 +375,12 @@ class LoginScreen extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  const Text(
+                                  Text(
                                     'Entrar con Google',
                                     style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w600,
+                                      color: cs.onPrimary,
                                     ),
                                   ),
                                 ],
@@ -377,7 +392,7 @@ class LoginScreen extends StatelessWidget {
                             children: [
                               Expanded(
                                 child: Divider(
-                                  color: const Color(0xFFC1C6D7).withOpacity(0.3),
+                                  color: cs.outlineVariant.withOpacity(0.4),
                                 ),
                               ),
                               Padding(
@@ -387,14 +402,14 @@ class LoginScreen extends StatelessWidget {
                                   style: GoogleFonts.inter(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w800,
-                                    color: const Color(0xFF717786),
+                                    color: cs.onSurfaceVariant,
                                     letterSpacing: 2.0,
                                   ),
                                 ),
                               ),
                               Expanded(
                                 child: Divider(
-                                  color: const Color(0xFFC1C6D7).withOpacity(0.3),
+                                  color: cs.outlineVariant.withOpacity(0.4),
                                 ),
                               ),
                             ],
@@ -405,12 +420,18 @@ class LoginScreen extends StatelessWidget {
                             height: 56,
                             child: OutlinedButton.icon(
                               onPressed: () {},
-                              icon: const Icon(Icons.mail_outline_rounded),
-                              label: const Text('Usar correo institucional'),
+                              icon: Icon(Icons.mail_outline_rounded,
+                                  color: cs.onSurfaceVariant),
+                              label: Text(
+                                'Usar correo institucional',
+                                style: TextStyle(color: cs.onSurfaceVariant),
+                              ),
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: const Color(0xFF414755),
+                                foregroundColor: cs.onSurfaceVariant,
                                 side: BorderSide.none,
-                                backgroundColor: const Color(0xFFF1F3FE),
+                                backgroundColor: isDark
+                                    ? AppTheme.darkSurfaceCard2
+                                    : const Color(0xFFF1F3FE),
                                 shape: const StadiumBorder(),
                               ),
                             ),
@@ -419,7 +440,7 @@ class LoginScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 48),
-                    // Featurette
+                    // Feature cards
                     Row(
                       children: [
                         Expanded(
@@ -427,7 +448,8 @@ class LoginScreen extends StatelessWidget {
                             context,
                             Icons.workspace_premium_rounded,
                             'Certificado\nOficial',
-                            const Color(0xFF006B27),
+                            cs.tertiary,
+                            isDark,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -436,21 +458,22 @@ class LoginScreen extends StatelessWidget {
                             context,
                             Icons.speed_rounded,
                             'Ritmo\nÁgil',
-                            const Color(0xFF405E96),
+                            cs.secondary,
+                            isDark,
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 40),
-                    // Footer
+                    // Footer links
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _buildFooterLink('Ayuda'),
+                        _buildFooterLink('Ayuda', cs),
                         const SizedBox(width: 24),
-                        _buildFooterLink('Privacidad'),
+                        _buildFooterLink('Privacidad', cs),
                         const SizedBox(width: 24),
-                        _buildFooterLink('Términos'),
+                        _buildFooterLink('Términos', cs),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -458,7 +481,7 @@ class LoginScreen extends StatelessWidget {
                       '© 2024 Estudiante App. Todos los derechos reservados.',
                       style: GoogleFonts.inter(
                         fontSize: 11,
-                        color: const Color(0xFF414755).withOpacity(0.4),
+                        color: cs.onSurfaceVariant.withOpacity(0.5),
                       ),
                     ),
                   ],
@@ -471,23 +494,27 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFeatureCard(BuildContext context, IconData icon, String text, Color color) {
+  Widget _buildFeatureCard(BuildContext context, IconData icon, String text,
+      Color color, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: isDark ? color.withOpacity(0.12) : color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16),
+        border: isDark
+            ? Border.all(color: color.withOpacity(0.2))
+            : null,
       ),
       child: Row(
         children: [
-          Icon(icon, color: color, size: 24),
+          Icon(icon, color: isDark ? color : color.withOpacity(0.85), size: 24),
           const SizedBox(width: 12),
           Text(
             text,
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: color.withOpacity(0.8),
+              color: isDark ? color : color.withOpacity(0.8),
             ),
           ),
         ],
@@ -495,13 +522,13 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFooterLink(String text) {
+  Widget _buildFooterLink(String text, ColorScheme cs) {
     return Text(
       text,
       style: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w500,
-        color: const Color(0xFF414755).withOpacity(0.6),
+        color: cs.onSurfaceVariant.withOpacity(0.6),
       ),
     );
   }
@@ -538,7 +565,13 @@ class _MainNavigationState extends State<MainNavigation> {
         actions: [
           IconButton(
             icon: Icon(Icons.logout, color: cs.onSurface),
-            onPressed: () => FirebaseAuth.instance.signOut(),
+            tooltip: 'Cerrar sesión',
+            onPressed: () async {
+              // disconnect() revoca el token OAuth y limpia la caché de Google
+              // para que en el próximo login siempre aparezca el selector de cuentas.
+              await googleSignIn.disconnect().catchError((_) {});
+              await FirebaseAuth.instance.signOut();
+            },
           ),
         ],
       ),
